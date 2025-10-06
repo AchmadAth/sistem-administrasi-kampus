@@ -6,6 +6,9 @@ const {
   getLetterById,
   updateLetterStatus,
   deleteLetter,
+  cancelNumber,
+  editNumber,
+  getNumberingStats,
 } = require('../controllers/letterController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { body } = require('express-validator');
@@ -68,5 +71,12 @@ router.put('/:id/status', authenticate, authorize('admin', 'supervisor'), update
 
 // Delete letter (students can delete their own pending letters)
 router.delete('/:id', authenticate, deleteLetter);
+
+// Letter numbering management (supervisor only)
+router.put('/:id/number/cancel', authenticate, authorize('supervisor', 'admin'), cancelNumber);
+router.put('/:id/number/edit', authenticate, authorize('supervisor', 'admin'), editNumber);
+
+// Get numbering statistics
+router.get('/stats/numbering', authenticate, authorize('supervisor', 'admin'), getNumberingStats);
 
 module.exports = router;

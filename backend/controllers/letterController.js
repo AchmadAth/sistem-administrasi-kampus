@@ -1,6 +1,7 @@
 const { Letter, User } = require('../models');
 const { validationResult } = require('express-validator');
 const { isValidLetterType, getLetterTypeByCode } = require('../config/letterTypes');
+const { assignLetterNumber, cancelLetterNumber, editLetterNumber, getLetterNumberingStats } = require('../utils/letterNumbering');
 
 /**
  * Create a new letter request
@@ -281,6 +282,16 @@ const updateLetterStatus = async (req, res) => {
 
     await letter.update(updateData);
 
+    // Auto-assign letter number when approved
+    if (status === 'approved') {
+      try {
+        await assignLetterNumber(id);
+      } catch (error) {
+        console.error('Error auto-assigning letter number:', error);
+        // Continue even if numbering fails
+      }
+    }
+
     // Fetch updated letter with associations
     const updatedLetter = await Letter.findByPk(id, {
       include: [
@@ -376,4 +387,94 @@ module.exports = {
   getLetterById,
   updateLetterStatus,
   deleteLetter,
+};
+
+/**
+ * Manually cancel letter number (supervisor only)
+ * PUT /api/letters/:id/number/cancel
+ */
+const cancelNumber = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const letter = await cancelLetterNumber(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Letter number canceled successfully',
+      data: { letter },
+    });
+  } catch (error) {
+    console.error('Cancel letter number error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error canceling letter number',
+    });
+  }
+};
+
+/**
+ * Manually edit letter number (supervisor only)
+ * PUT /api/letters/:id/number/edit
+ */
+const editNumber = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { letterNumber } = req.body;
+
+    if (!letterNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Letter number is required',
+      });
+    }
+
+    const letter = await editLetterNumber(id, letterNumber);
+
+    res.status(200).json({
+      success: true,
+      message: 'Letter number updated successfully',
+      data: { letter },
+    });
+  } catch (error) {
+    console.error('Edit letter number error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Error editing letter number',
+    });
+  }
+};
+
+/**
+ * Get letter numbering statistics
+ * GET /api/letters/stats/numbering
+ */
+const getNumberingStats = async (req, res) => {
+  try {
+    const { year } = req.query;
+    const stats = await getLetterNumberingStats(year ? parseInt(year) : undefined);
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error('Get numbering stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching numbering statistics',
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  createLetter,
+  getLetters,
+  getLetterById,
+  updateLetterStatus,
+  deleteLetter,
+  cancelNumber,
+  editNumber,
+  getNumberingStats,
 };
