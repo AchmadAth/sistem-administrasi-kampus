@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const { testConnection, syncDatabase } = require('./models');
 const authRoutes = require('./routes/authRoutes');
+const letterRoutes = require('./routes/letterRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +38,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/letters', letterRoutes);
 
 // 404 handler
 app.use((req, res) => {
